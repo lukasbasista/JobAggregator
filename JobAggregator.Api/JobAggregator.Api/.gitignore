@@ -1,0 +1,61 @@
+# .NET specific folders and files
+bin/
+obj/
+
+# User-specific files
+*.user
+*.rsuser
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Application launch configuration
+*.vs/
+.vscode/
+
+# Logs and output
+*.log
+*.tlog
+*.dlog
+
+# Publish output folders
+publish/
+out/
+
+# Backup and old files
+*.bak
+*.old
+*.orig
+
+# Temporary files
+*.tmp
+*.temp
+
+# Package managers
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# NuGet package folder
+*.nuget/packages/
+
+# Azure App Service settings
+LocalSettings.json
+
+# Entity Framework Migration Scripts
+Migrations/
+
+# Resharper and other tools
+_ReSharper*/
+*.DotSettings.user
+
+# JetBrains Rider project files
+.idea/
+
+# Test results
+TestResults/
+
+# Azure Functions local settings
+local.settings.json
