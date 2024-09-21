@@ -25,7 +25,7 @@ jobs:
     - name: Deploy backend
       run: |
         ssh deploy@194.99.20.210 "cd /var/www/JobAggregator/backend && git pull origin master"
-        ssh deploy@194.99.20.210 "cd /var/www/JobAggregator/backend/JobAggregator.Api && dotnet build && sudo systemctl restart JobAggregator"
+        ssh deploy@194.99.20.210 "cd /var/www/JobAggregator/backend/JobAggregator/JobAggregator.Api && dotnet build && sudo systemctl restart JobAggregator"
 
     - name: Deploy frontend
       run: |
