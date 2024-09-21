@@ -22,12 +22,14 @@ jobs:
       run: |
         ssh-keyscan -H 194.99.20.210 >> ~/.ssh/known_hosts
 
+    - name: Pull origin
+      run: | 
+        ssh deploy@194.99.20.210 "cd /var/www/JobAggregator/ && git pull origin master"
+
     - name: Deploy backend
       run: |
-        ssh deploy@194.99.20.210 "cd /var/www/JobAggregator/backend && git pull origin master"
-        ssh deploy@194.99.20.210 "cd /var/www/JobAggregator/backend/JobAggregator/JobAggregator.Api && dotnet build && sudo systemctl restart JobAggregator"
+        ssh deploy@194.99.20.210 "cd /var/www/JobAggregator/JobAggregator.Api/JobAggregator.Api && dotnet build && sudo systemctl restart jobaggregator"
 
     - name: Deploy frontend
       run: |
-        ssh deploy@194.99.20.210 "cd /var/www/JobAggregator/frontend && git pull origin master"
-        ssh deploy@194.99.20.210 "cd /var/www/JobAggregator/frontend && npm install && npm run build"
+        ssh deploy@194.99.20.210 "cd /var/www/JobAggregator/jobaggregator.frontend && npm install && npm run build"
