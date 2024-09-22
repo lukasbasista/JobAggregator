@@ -22,9 +22,9 @@ jobs:
       run: |
         ssh-keyscan -H 194.99.20.210 >> ~/.ssh/known_hosts
 
-    - name: Pull origin
-      run: | 
-        ssh deploy@194.99.20.210 "cd /var/www/JobAggregator/ && git pull origin master"
+    - name: Force Pull from Git
+      run: |
+        ssh deploy@194.99.20.210 "cd /var/www/JobAggregator/ && git fetch origin master && git reset --hard origin/master"
 
     - name: Deploy backend
       run: |
