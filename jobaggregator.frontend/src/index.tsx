@@ -9,7 +9,7 @@ import axios from 'axios';
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
-axios.defaults.baseURL = 'https://localhost:7139/api';
+axios.defaults.baseURL = process.env.REACT_APP_API_URL;
 root.render(
   <React.StrictMode>
     <CssBaseline />
