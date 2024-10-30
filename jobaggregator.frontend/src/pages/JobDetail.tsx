@@ -5,7 +5,7 @@ import {
   Container,
   Typography,
   Button,
-  Grid2,
+  Grid,
   Card,
   CardContent,
   CardMedia,
@@ -26,7 +26,7 @@ const JobDetail: React.FC = () => {
         setJob(response.data);
       })
       .catch((error) => {
-        console.error("Chyba pri načítaní detailu pracovnej ponuky:", error);
+        console.error("Error loading job offer detail:", error);
       });
   }, [id]);
 
@@ -42,27 +42,22 @@ const JobDetail: React.FC = () => {
     );
   }
 
+  const imageUrl = job.companyLogoUrl || job.portal?.portalLogoUrl || "https://via.placeholder.com/150";
+
   return (
     <>
       <NavBar />
       <Container sx={{ marginTop: 4 }}>
-        <Grid2 container spacing={4}>
-          <Grid2 size={{ xs: 12, md: 8 }}>
+        <Grid container spacing={4}>
+          <Grid item xs={12} md={8}>
             <Typography variant="h4" component="div" sx={{ marginBottom: 2 }}>
               {job.title}
-            </Typography>
-            <Typography
-              variant="h6"
-              color="text.secondary"
-              sx={{ marginBottom: 2 }}
-            >
-              {job.companyName}
             </Typography>
             <Typography variant="body1" sx={{ marginBottom: 2 }}>
               <strong>Lokalita:</strong> {job.location}
             </Typography>
             <Typography variant="body1" sx={{ marginBottom: 2 }}>
-              <strong>Plat:</strong> {job.salary}
+              <strong>Mzda:</strong> {job.salary}
             </Typography>
             <Typography variant="body1" sx={{ marginBottom: 2 }}>
               <strong>Typ práce:</strong> {job.jobType}
@@ -82,22 +77,29 @@ const JobDetail: React.FC = () => {
                 },
               }}
             >
-              Uchádzať sa o pozíciu
+              Ucházet se o pozici
             </Button>
-          </Grid2>
-          <Grid2 size={{ xs: 12, md: 4 }}>
-            <Card>
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <Card sx={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
               <CardMedia
                 component="img"
-                image="https://via.placeholder.com/150"
+                image={imageUrl}
                 alt={job.companyName}
+                sx={{ width: "100%", height: 200, objectFit: "contain" }}
               />
               <CardContent>
-                <Typography variant="h6">O spoločnosti</Typography>
+                <Typography variant="h6" sx={{ marginTop: 2 }}>
+                  {job.companyName}
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  O společnosti
+                </Typography>
               </CardContent>
             </Card>
-          </Grid2>
-        </Grid2>
+          </Grid>
+        </Grid>
       </Container>
       <Footer />
     </>

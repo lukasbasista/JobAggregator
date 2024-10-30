@@ -1,119 +1,93 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import axios from "axios";
-import {
-  Container,
-  Grid2,
-  Card,
-  CardContent,
-  Typography,
-  Button,
-  TextField,
-} from "@mui/material";
+import { Container, Grid, Typography } from "@mui/material";
 import { JobPosting } from "../models/JobPosting";
+import JobCard from "./JobCard";
+import InfiniteScroll from "react-infinite-scroll-component";
+import SkeletonLoader from "./SkeletonLoader";
 
-const JobList: React.FC = () => {
+interface JobListProps {
+  fetchUrl: string;
+  title: string;
+  queryParams?: Record<string, any>;
+}
+
+const JobList: React.FC<JobListProps> = ({ fetchUrl, title, queryParams }) => {
   const [jobs, setJobs] = useState<JobPosting[]>([]);
-  const [keywords, setKeywords] = useState<string>("");
-  const [location, setLocation] = useState<string>("");
-  const [companyName, setCompanyName] = useState<string>("");
-  const [jobType, setJobType] = useState<string>("");
+  const [pageNumber, setPageNumber] = useState<number>(1);
+  const [hasMore, setHasMore] = useState<boolean>(true);
+  const [initialLoading, setInitialLoading] = useState<boolean>(true);
 
-  const searchJobs = () => {
-    axios
-      .get<JobPosting[]>("/JobPostings", {
-        params: {
-          keywords: keywords || undefined,
-          location: location || undefined,
-          companyName: companyName || undefined,
-          jobType: jobType || undefined,
-        },
-      })
-      .then((response) => {
-        setJobs(response.data);
-      })
-      .catch((error) => {
+  const pageSize = 9;
+
+  const memoizedQueryParams = useMemo(() => queryParams || {}, [queryParams]);
+
+  const fetchJobs = useCallback(
+    async (page: number) => {
+      try {
+        const response = await axios.get<JobPosting[]>(fetchUrl, {
+          params: {
+            ...memoizedQueryParams,
+            pageNumber: page,
+            pageSize: pageSize,
+          },
+        });
+        if (response.data.length === 0) {
+          setHasMore(false);
+        } else {
+          setJobs((prevJobs) => (page === 1 ? response.data : [...prevJobs, ...response.data]));
+          setPageNumber(page + 1);
+        }
+      } catch (error) {
         console.error("Error loading job offers:", error);
-      });
-  };
+        setHasMore(false);
+      } finally {
+        setInitialLoading(false);
+      }
+    },
+    [fetchUrl, memoizedQueryParams]
+  );
 
   useEffect(() => {
-    searchJobs();
-  });
+    setJobs([]);
+    setPageNumber(1);
+    setHasMore(true);
+    setInitialLoading(true);
+    fetchJobs(1);
+  }, [fetchUrl, memoizedQueryParams, fetchJobs]);
 
-  const handleSearch = () => {
-    searchJobs();
+  const loadMoreJobs = () => {
+    fetchJobs(pageNumber);
   };
 
   return (
     <Container sx={{ marginTop: 4 }}>
       <Typography variant="h4" component="div" sx={{ marginBottom: 2 }}>
-        Vyhledávání inzerátů
+        {title}
       </Typography>
-      <Grid2 container spacing={2}>
-        <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
-          <TextField
-            label="Název pozice"
-            variant="outlined"
-            fullWidth
-            value={keywords}
-            onChange={(e) => setKeywords(e.target.value)}
-          />
-        </Grid2>
-        <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
-          <TextField
-            label="Lokalita"
-            variant="outlined"
-            fullWidth
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-          />
-        </Grid2>
-        <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
-          <TextField
-            label="Název společnosti"
-            variant="outlined"
-            fullWidth
-            value={companyName}
-            onChange={(e) => setCompanyName(e.target.value)}
-          />
-        </Grid2>
-        <Grid2 size={{ xs: 12, sm: 6, md: 3 }}>
-          <TextField
-            label="Typ práce"
-            variant="outlined"
-            fullWidth
-            value={jobType}
-            onChange={(e) => setJobType(e.target.value)}
-          />
-        </Grid2>
-        <Grid2 size={{ xs: 12 }} sx={{ textAlign: "right" }}>
-          <Button variant="contained" color="primary" onClick={handleSearch}>
-            Vyhledat
-          </Button>
-        </Grid2>
-      </Grid2>
-
-      <Grid2 container spacing={4} sx={{ marginTop: 2 }}>
-        {jobs.map((job) => (
-          <Grid2 key={job.jobPostingID} size={{ xs: 12, sm: 6, md: 4 }}>
-            <Card>
-              <CardContent>
-                <Typography variant="h5" component="div">
-                  {job.title}
-                </Typography>
-                <Typography sx={{ mb: 1.5 }} color="text.secondary">
-                  {job.companyName}
-                </Typography>
-                <Typography variant="body2">{job.location}</Typography>
-                <Typography variant="body2">{job.salary}</Typography>
-              </CardContent>
-              <Button size="small" href={`/job/${job.jobPostingID}`}>
-                Více informací
-              </Button>
-            </Card>
-          </Grid2>
-        ))}
-      </Grid2>
+      {initialLoading ? (
+        <SkeletonLoader pageSize={pageSize} />
+      ) : (
+        <InfiniteScroll
+          dataLength={jobs.length}
+          next={loadMoreJobs}
+          hasMore={hasMore}
+          loader={<SkeletonLoader pageSize={pageSize} />}
+          endMessage={
+            <Typography variant="body1" align="center" sx={{ marginTop: 2 }}>
+              <b>Žádné další inzeráty</b>
+            </Typography>
+          }
+        >
+          <Grid container spacing={4}>
+            {jobs.map((job) => (
+              <Grid item key={job.jobPostingID} xs={12} sm={6} md={4}>
+                <JobCard job={job} />
+              </Grid>
+            ))}
+          </Grid>
+        </InfiniteScroll>
+      )}
     </Container>
   );
 };
