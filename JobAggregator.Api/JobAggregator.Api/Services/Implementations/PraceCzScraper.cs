@@ -16,7 +16,7 @@ namespace JobAggregator.Api.Services.Implementations
         private readonly IJobPostingRepository _jobPostingRepository;
         private readonly ILogger<PraceCzScraper> _logger;
 
-        public PraceCzScraper(IJobPostingRepository jobPostingRepository)
+        public PraceCzScraper(IJobPostingRepository jobPostingRepository, ILogger<PraceCzScraper> logger)
         {
             PortalInfo = new Portal
             {
@@ -25,89 +25,88 @@ namespace JobAggregator.Api.Services.Implementations
                 PortalLogoUrl = "https://pracecdn.cz/images/logo-beata.svg",
             };
 
-            _httpClient = new HttpClient();
-            _httpClient.BaseAddress = new Uri(PortalInfo.BaseUrl);
+            _httpClient = new HttpClient
+            {
+                BaseAddress = new Uri(PortalInfo.BaseUrl)
+            };
 
             _jobPostingRepository = jobPostingRepository;
-
-            var loggerConfiguration = new LoggerConfiguration()
-                .MinimumLevel.Debug()
-                .WriteTo.File($"Logs/{PortalInfo.PortalName}/{PortalInfo.PortalName}_Log.txt", rollingInterval: RollingInterval.Day);
-
-            var serilogLogger = loggerConfiguration.CreateLogger();
-            var loggerFactory = new SerilogLoggerFactory(serilogLogger);
-            _logger = loggerFactory.CreateLogger<PraceCzScraper>();
+            _logger = logger;
         }
 
         public async Task<IEnumerable<JobPosting>> ScrapeAsync()
         {
-            _logger.LogInformation("Starting scrape for {PortalName}", PortalInfo.PortalName);
-            var jobPostings = new List<JobPosting>();
-            bool foundExistingJob = false;
-            int pageNumber = 1;
-
-            var portal = await _jobPostingRepository.GetPortalByNameAsync(PortalInfo.PortalName);
-            if (portal == null)
+            using (_logger.BeginScope(new Dictionary<string, object> { ["Scope"] = "[PraceCz] " }))
             {
-                _logger.LogInformation("Portal not found in database. Creating a new entry for {PortalName}", PortalInfo.PortalName);
-                portal = new Portal
+                _logger.LogInformation("Starting scrape for {PortalName}", PortalInfo.PortalName);
+                var jobPostings = new List<JobPosting>();
+                bool foundExistingJob = false;
+                int pageNumber = 1;
+
+                var portal = await _jobPostingRepository.GetPortalByNameAsync(PortalInfo.PortalName);
+                if (portal == null)
                 {
-                    PortalName = PortalInfo.PortalName,
-                    BaseUrl = PortalInfo.BaseUrl,
-                    IsActive = true,
-                    CreatedDate = DateTime.UtcNow,
-                    LastUpdatedDate = DateTime.UtcNow
-                };
-                await _jobPostingRepository.AddPortalAsync(portal);
-                _logger.LogInformation("New portal entry created with ID: {PortalID}", portal.PortalID);
-            }
-
-            PortalInfo.PortalID = portal.PortalID;
-
-            while (!foundExistingJob && pageNumber <= 5)
-            {
-                var url = $"/nabidky/?page={pageNumber}";
-                _logger.LogDebug("Scraping page {PageNumber} for {PortalName} from URL: {Url}", pageNumber, PortalInfo.PortalName, url);
-
-                var response = await _httpClient.GetAsync(url);
-                if (!response.IsSuccessStatusCode)
-                {
-                    _logger.LogWarning("Failed to retrieve page {PageNumber}. StatusCode: {StatusCode}", pageNumber, response.StatusCode);
-                    return jobPostings;
-                }
-
-                var pageContents = await response.Content.ReadAsStringAsync();
-                var htmlDoc = new HtmlDocument();
-                htmlDoc.LoadHtml(pageContents);
-
-                var jobNodes = htmlDoc.DocumentNode.SelectNodes("//li[contains(@class, 'search-result__advert')]");
-                _logger.LogDebug("Found {JobCount} job nodes on page {PageNumber}", jobNodes?.Count ?? 0, pageNumber);
-
-                if (jobNodes == null || !jobNodes.Any()) break;
-
-                foreach (var jobNode in jobNodes)
-                {
-                    var jobPosting = await ParseJobNodeAsync(jobNode);
-                    if (jobPosting != null)
+                    _logger.LogInformation("Portal not found in database. Creating a new entry for {PortalName}", PortalInfo.PortalName);
+                    portal = new Portal
                     {
-                        jobPosting.PortalID = PortalInfo.PortalID;
-                        bool exists = await _jobPostingRepository.IDExistsAsync(jobPosting.ExternalID);
-                        if (exists)
-                        {
-                            _logger.LogInformation("Job with ExternalID: {ExternalID} already exists in the database.", jobPosting.ExternalID);
-                            foundExistingJob = true;
-                            break;
-                        }
-                        _logger.LogInformation("Adding new job posting with title: {Title}", jobPosting.Title);
-                        jobPostings.Add(jobPosting);
-                    }
+                        PortalName = PortalInfo.PortalName,
+                        BaseUrl = PortalInfo.BaseUrl,
+                        IsActive = true,
+                        CreatedDate = DateTime.UtcNow,
+                        LastUpdatedDate = DateTime.UtcNow
+                    };
+                    await _jobPostingRepository.AddPortalAsync(portal);
+                    _logger.LogInformation("New portal entry created with ID: {PortalID}", portal.PortalID);
                 }
 
-                if (!foundExistingJob) pageNumber++;
-            }
+                PortalInfo.PortalID = portal.PortalID;
 
-            _logger.LogInformation("Scraping completed. Total jobs scraped: {JobCount}", jobPostings.Count);
-            return jobPostings;
+                while (!foundExistingJob && pageNumber <= 5)
+                {
+                    var url = $"/nabidky/?page={pageNumber}";
+                    _logger.LogDebug("Scraping page {PageNumber} for {PortalName} from URL: {Url}", pageNumber, PortalInfo.PortalName, url);
+
+                    var response = await _httpClient.GetAsync(url);
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        _logger.LogWarning("Failed to retrieve page {PageNumber}. StatusCode: {StatusCode}", pageNumber, response.StatusCode);
+                        return jobPostings;
+                    }
+
+                    var pageContents = await response.Content.ReadAsStringAsync();
+                    var htmlDoc = new HtmlDocument();
+                    htmlDoc.LoadHtml(pageContents);
+
+                    var jobNodes = htmlDoc.DocumentNode.SelectNodes("//li[contains(@class, 'search-result__advert')]");
+                    _logger.LogDebug("Found {JobCount} job nodes on page {PageNumber}", jobNodes?.Count ?? 0, pageNumber);
+
+                    if (jobNodes == null || !jobNodes.Any()) break;
+
+                    foreach (var jobNode in jobNodes)
+                    {
+                        var jobPosting = await ParseJobNodeAsync(jobNode);
+                        if (jobPosting != null)
+                        {
+                            jobPosting.PortalID = PortalInfo.PortalID;
+                            bool exists = await _jobPostingRepository.IDExistsAsync(jobPosting.ExternalID);
+                            if (exists)
+                            {
+                                _logger.LogInformation("Job with ExternalID: {ExternalID} already exists in the database.", jobPosting.ExternalID);
+                                foundExistingJob = true;
+                                break;
+                            }
+                            _logger.LogInformation("Adding new job posting with title: {Title}", jobPosting.Title);
+                            jobPostings.Add(jobPosting);
+                        }
+                    }
+
+                    if (!foundExistingJob) pageNumber++;
+                }
+
+                _logger.LogInformation("Scraping completed. Total jobs scraped: {JobCount}", jobPostings.Count);
+
+                return jobPostings;
+            }
         }
 
         private async Task<JobPosting> ParseJobNodeAsync(HtmlNode jobNode)

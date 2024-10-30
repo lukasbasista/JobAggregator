@@ -9,15 +9,32 @@ using System.Text.Json.Serialization;
 using Quartz;
 using JobAggregator.Api.Helpers;
 using JobAggregator.Api.Jobs;
+using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Serilog for global logging
-Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Debug()
-    .WriteTo.Console()
-    .WriteTo.File("Logs/GlobalLog.txt", rollingInterval: RollingInterval.Day)
-    .CreateLogger();
+var isDevelopment = builder.Environment.IsDevelopment();
+
+var loggerConfiguration = new LoggerConfiguration()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Scope}{Message:lj}{NewLine}{Exception}");
+
+if (isDevelopment)
+{
+    loggerConfiguration.MinimumLevel.Debug()
+        .WriteTo.File($"Logs/{DateTime.Now:yyyy-MM-dd}_DevelopmentLog.txt",
+            outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Scope}{Message:lj}{NewLine}{Exception}");
+}
+else
+{
+    loggerConfiguration.MinimumLevel.Information()
+        .WriteTo.File($"Logs/{DateTime.Now:yyyy-MM-dd}_ProductionLog.txt",
+            restrictedToMinimumLevel: LogEventLevel.Error,
+            outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Scope}{Message:lj}{NewLine}{Exception}");
+}
+
+Log.Logger = loggerConfiguration.CreateLogger();
 
 // Add Serilog to the logging providers
 builder.Host.UseSerilog();
