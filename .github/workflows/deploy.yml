@@ -31,7 +31,7 @@ jobs:
         ssh deploy@194.99.20.210 "
           cd /var/www/JobAggregator/JobAggregator.Api/JobAggregator.Api &&
           dotnet build --configuration Release &&
-          dotnet ef database update --configuration Release &&
+          dotnet ef database update --configuration Release --environment Production &&
           sudo systemctl restart jobaggregator
         "
 
