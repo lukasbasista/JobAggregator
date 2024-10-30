@@ -22,6 +22,9 @@ const JobCard: React.FC<JobCardProps> = ({ job }) => {
     navigate(`/job/${job.jobPostingID}`);
   };
 
+  const imageUrl = job.companyLogoUrl || job.portal?.portalLogoUrl || "https://via.placeholder.com/150";
+
+
   return (
     <Card
       sx={{
@@ -36,11 +39,16 @@ const JobCard: React.FC<JobCardProps> = ({ job }) => {
       }}
     >
       <CardActionArea onClick={handleClick} sx={{ flexGrow: 1 }}>
-        <CardMedia
+      <CardMedia
           component="img"
-          image="https://via.placeholder.com/150"
+          image={imageUrl}
           alt={job.companyName || "Company Logo"}
-          sx={{ height: 140 }}
+          sx={{
+            height: 140,
+            objectFit: "contain",
+            objectPosition: "center",
+            backgroundColor: "#f5f5f5",
+          }}
         />
         <CardContent>
           <Typography variant="h5" component="div" gutterBottom>
