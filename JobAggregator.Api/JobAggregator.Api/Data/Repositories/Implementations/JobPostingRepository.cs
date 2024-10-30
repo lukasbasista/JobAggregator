@@ -55,6 +55,7 @@ namespace JobAggregator.Api.Data.Repositories.Implementations
             }
 
             query = query.OrderByDescending(jp => jp.CreatedDate)
+                 .Include(jp => jp.Portal)
                  .Skip((pageNumber - 1) * pageSize)
                  .Take(pageSize);
 
@@ -64,12 +65,15 @@ namespace JobAggregator.Api.Data.Repositories.Implementations
 
         public async Task<JobPosting> GetByIdAsync(int id)
         {
-            return await _context.JobPostings.FindAsync(id);
+            return await _context.JobPostings
+                .Include(jp => jp.Portal)
+                .FirstOrDefaultAsync(jp => jp.JobPostingID == id);
         }
 
         public async Task<IEnumerable<JobPosting>> GetLatestJobPostingsAsync(int pageNumber, int pageSize)
         {
             return await _context.JobPostings
+                .Include(jp => jp.Portal)
                 .OrderByDescending(jp => jp.CreatedDate)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
@@ -114,6 +118,17 @@ namespace JobAggregator.Api.Data.Repositories.Implementations
                 .Distinct()
                 .Take(10)
                 .ToListAsync();
+        }
+
+        public async Task<Portal> GetPortalByNameAsync(string portalName)
+        {
+            return await _context.Portals.FirstOrDefaultAsync(p => p.PortalName == portalName);
+        }
+
+        public async Task AddPortalAsync(Portal portal)
+        {
+            await _context.Portals.AddAsync(portal);
+            await _context.SaveChangesAsync();
         }
 
     }

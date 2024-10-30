@@ -14,5 +14,7 @@ namespace JobAggregator.Api.Data.Repositories.Interfaces
         Task<IEnumerable<string>> GetCompanyNamesSuggestionsAsync(string term);
         Task<IEnumerable<string>> GetJobTypesSuggestionsAsync(string term);
         Task<bool> IDExistsAsync(string externalId);
+        Task<Portal> GetPortalByNameAsync(string portalName);
+        Task AddPortalAsync(Portal portal);
     }
 }
