@@ -44,9 +44,6 @@ package-lock.json
 # Azure App Service settings
 LocalSettings.json
 
-# Entity Framework Migration Scripts
-Migrations/
-
 # Resharper and other tools
 _ReSharper*/
 *.DotSettings.user
