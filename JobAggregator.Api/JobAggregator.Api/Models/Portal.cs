@@ -8,6 +8,7 @@
         public bool IsActive { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime LastUpdatedDate { get; set; }
+        public string? PortalLogoUrl { get; set; }
 
         public virtual ICollection<JobPosting> JobPostings { get; set; }
     }

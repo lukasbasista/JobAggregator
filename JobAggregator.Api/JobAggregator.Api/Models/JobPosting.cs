@@ -13,11 +13,12 @@
         public string ExternalID { get; set; }
         public DateTime DateScraped { get; set; }
         public string HashCode { get; set; }
-        public string Salary { get; set; }
+        public string? Salary { get; set; }
         public string JobType { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime LastUpdatedDate { get; set; }
+        public string? CompanyLogoUrl { get; set; }
 
         public virtual Portal Portal { get; set; }
     }
