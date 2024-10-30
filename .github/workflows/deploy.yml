@@ -29,11 +29,10 @@ jobs:
     - name: Deploy backend and apply migrations
       run: |
         ssh deploy@194.99.20.210 "
-          source ~/.profile
-          export PATH=\$PATH:\$HOME/.dotnet/tools
           export ASPNETCORE_ENVIRONMENT=Production
           cd /var/www/JobAggregator/JobAggregator.Api/JobAggregator.Api &&
           dotnet build --configuration Release &&
+          dotnet tool restore &&
           dotnet ef database update --configuration Release &&
           sudo systemctl restart jobaggregator
         "
