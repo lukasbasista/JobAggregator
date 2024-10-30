@@ -31,6 +31,7 @@ jobs:
         ssh deploy@194.99.20.210 "
           export ASPNETCORE_ENVIRONMENT=Production
           cd /var/www/JobAggregator/JobAggregator.Api/JobAggregator.Api &&
+          rm -rf bin/ obj/ &&
           dotnet build --configuration Release &&
           dotnet tool restore &&
           dotnet ef database update --configuration Release &&
