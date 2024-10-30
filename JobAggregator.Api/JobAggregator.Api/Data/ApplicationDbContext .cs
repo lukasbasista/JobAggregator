@@ -7,10 +7,12 @@ namespace JobAggregator.Api.Data
     {
         public DbSet<JobPosting> JobPostings { get; set; }
         public DbSet<Portal> Portals { get; set; }
+        private readonly ILogger<ApplicationDbContext> _logger;
 
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ILogger<ApplicationDbContext> logger)
             : base(options)
         {
+            _logger = logger;
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -19,6 +21,10 @@ namespace JobAggregator.Api.Data
 
             modelBuilder.Entity<JobPosting>()
                 .HasIndex(j => j.HashCode)
+                .IsUnique();
+
+            modelBuilder.Entity<JobPosting>()
+                .HasIndex(j => j.ExternalID)
                 .IsUnique();
 
             modelBuilder.Entity<JobPosting>()
