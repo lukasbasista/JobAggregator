@@ -4,9 +4,11 @@ using JobAggregator.Api.Data.Repositories.Interfaces;
 using JobAggregator.Api.Services.Implementations;
 using JobAggregator.Api.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Serilog;
 using System.Text.Json.Serialization;
+using Quartz;
+using JobAggregator.Api.Helpers;
+using JobAggregator.Api.Jobs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,9 +55,26 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader());
 });
 
+builder.Services.AddQuartz(q =>
+{
+    var jobKey = new JobKey("ScrapingJob");
+    q.AddJob<ScrapingJob>(opts => opts.WithIdentity(jobKey));
+
+    var nextFireTime = SchedulerHelper.GetNextRandomTime();
+
+    q.AddTrigger(opts => opts
+        .ForJob(jobKey)
+        .WithIdentity("ScrapingJob-trigger")
+        .StartAt(nextFireTime)
+    );
+});
+
+builder.Services.AddQuartzHostedService(options =>
+{
+    options.WaitForJobsToComplete = true;
+});
+
 builder.Logging.ClearProviders();
-// builder.Logging.AddConsole();
-// builder.Logging.AddDebug();
 
 var app = builder.Build();
 

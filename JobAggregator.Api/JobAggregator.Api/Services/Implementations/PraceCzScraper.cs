@@ -32,7 +32,7 @@ namespace JobAggregator.Api.Services.Implementations
 
             var loggerConfiguration = new LoggerConfiguration()
                 .MinimumLevel.Debug()
-                .WriteTo.File($"Logs/{PortalInfo.PortalName}_Log.txt", rollingInterval: RollingInterval.Day);
+                .WriteTo.File($"Logs/{PortalInfo.PortalName}/{PortalInfo.PortalName}_Log.txt", rollingInterval: RollingInterval.Day);
 
             var serilogLogger = loggerConfiguration.CreateLogger();
             var loggerFactory = new SerilogLoggerFactory(serilogLogger);
