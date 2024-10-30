@@ -29,6 +29,7 @@ jobs:
     - name: Deploy backend and apply migrations
       run: |
         ssh deploy@194.99.20.210 "
+          source ~/.profile
           export ASPNETCORE_ENVIRONMENT=Production
           cd /var/www/JobAggregator/JobAggregator.Api/JobAggregator.Api &&
           rm -rf bin/ obj/ &&

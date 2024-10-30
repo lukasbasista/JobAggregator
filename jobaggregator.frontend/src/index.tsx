@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import './styles/global.css';
-import { CssBaseline, GlobalStyles } from '@mui/material';
+import { Box, CssBaseline, GlobalStyles } from '@mui/material';
 import axios from 'axios';
 
 const root = ReactDOM.createRoot(
@@ -18,7 +18,15 @@ root.render(
         body: { margin: 0, padding: 0 },
       }}
     />
-    <App />
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh',
+      }}
+    >
+      <App />
+    </Box>
   </React.StrictMode>
 );
 

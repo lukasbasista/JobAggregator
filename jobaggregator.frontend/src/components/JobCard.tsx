@@ -60,7 +60,10 @@ const JobCard: React.FC<JobCardProps> = ({ job }) => {
           <Typography variant="body2" color="text.secondary">
             {job.location}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="h6"
+            sx={{ color: "green", fontWeight: "bold", mt: 1 }}
+          >
             {job.salary}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
