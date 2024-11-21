@@ -138,7 +138,9 @@ namespace JobAggregator.Api.Services.Implementations
                 return null;
             }
 
-            var jobUrl = $"{PortalInfo.BaseUrl.TrimEnd('/')}{relativeUrl}";
+            var jobUrl = relativeUrl.StartsWith("http")
+                ? relativeUrl
+                : $"{PortalInfo.BaseUrl.TrimEnd('/')}{relativeUrl}";
             jobPosting.ApplyUrl = jobUrl;
             _logger.LogDebug("Parsed job URL: {JobUrl}", jobUrl);
 
