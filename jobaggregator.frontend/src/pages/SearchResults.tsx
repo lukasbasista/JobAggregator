@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import NavBar from "../components/NavBar";
 import SearchBar from "../components/SearchBar";
 import JobList from "../components/JobList";
-import Footer from "../components/Footer";
 
 const SearchResults: React.FC = () => {
   const location = useLocation();
@@ -17,14 +15,12 @@ const SearchResults: React.FC = () => {
 
   return (
     <>
-      <NavBar />
       <SearchBar />
       <JobList
         fetchUrl="/JobPostings"
         title="Výsledky vyhledávání"
         queryParams={queryParams}
       />
-      <Footer />
     </>
   );
 };

@@ -46,7 +46,6 @@ const JobDetail: React.FC = () => {
 
   return (
     <>
-      <NavBar />
       <Container sx={{ marginTop: 4 }}>
         <Grid container spacing={4}>
           <Grid item xs={12} md={8}>
@@ -101,7 +100,6 @@ const JobDetail: React.FC = () => {
           </Grid>
         </Grid>
       </Container>
-      <Footer />
     </>
   );
 };

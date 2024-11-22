@@ -1,9 +1,10 @@
 ﻿using JobAggregator.Api.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace JobAggregator.Api.Data
 {
-    public class ApplicationDbContext : DbContext
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         public DbSet<JobPosting> JobPostings { get; set; }
         public DbSet<Portal> Portals { get; set; }
