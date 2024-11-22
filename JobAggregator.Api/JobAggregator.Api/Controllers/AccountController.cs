@@ -70,7 +70,7 @@ namespace JobAggregator.Api.Controllers
         [HttpGet("profile")]
         public async Task<IActionResult> GetProfile()
         {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = User.FindFirst("id")?.Value;
             var user = await _userManager.FindByIdAsync(userId);
 
             if (user == null) return NotFound();
@@ -94,7 +94,7 @@ namespace JobAggregator.Api.Controllers
         [HttpPut("profile")]
         public async Task<IActionResult> UpdateProfile(UserProfileDTO model)
         {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = User.FindFirst("id")?.Value;
             var user = await _userManager.FindByIdAsync(userId);
 
             if (user == null) return NotFound();
