@@ -8,6 +8,7 @@ namespace JobAggregator.Api.Data
     {
         public DbSet<JobPosting> JobPostings { get; set; }
         public DbSet<Portal> Portals { get; set; }
+        public DbSet<Company> Companies { get; set; }
         private readonly ILogger<ApplicationDbContext> _logger;
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ILogger<ApplicationDbContext> logger)

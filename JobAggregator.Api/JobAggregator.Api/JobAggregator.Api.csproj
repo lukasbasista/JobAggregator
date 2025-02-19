@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="HtmlAgilityPack" Version="1.11.65" />
+    <PackageReference Include="HtmlSanitizer" Version="8.1.870" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0-rc.1.24451.1" />
@@ -16,6 +17,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Playwright" Version="1.50.0" />
     <PackageReference Include="Quartz.Extensions.Hosting" Version="3.13.0" />
     <PackageReference Include="Serilog" Version="4.1.1-dev-02314" />
     <PackageReference Include="Serilog.AspNetCore" Version="8.0.3" />

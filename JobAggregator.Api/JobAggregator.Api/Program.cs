@@ -54,10 +54,11 @@ builder.Services.AddControllers()
     });
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")), ServiceLifetime.Scoped);
 
 builder.Services.AddScoped<IJobPostingRepository, JobPostingRepository>();
 builder.Services.AddScoped<IJobPostingService, JobPostingService>();
+builder.Services.AddScoped<IGptJobParser, GptJobParser>();
 
 // Register scrapers
 builder.Services.AddScoped<IJobScraper, PraceCzScraper>();

@@ -51,14 +51,15 @@ namespace JobAggregator.Api.Data.Repositories.Implementations
 
             if (!string.IsNullOrEmpty(criteria.CompanyName))
             {
-                query = query.Where(j => j.CompanyName.Contains(criteria.CompanyName));
+                query = query.Where(j => j.Company != null && j.Company.CompanyName.Contains(criteria.CompanyName));
             }
 
-            query = query.OrderByDescending(jp => jp.CreatedDate)
-                 .Include(jp => jp.Portal)
-                 .Skip((pageNumber - 1) * pageSize)
-                 .Take(pageSize);
-
+            query = query
+                .OrderByDescending(jp => jp.CreatedDate)
+                .Include(jp => jp.Portal)
+                .Include(jp => jp.Company)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize);
 
             return await query.ToListAsync();
         }
@@ -67,6 +68,7 @@ namespace JobAggregator.Api.Data.Repositories.Implementations
         {
             return await _context.JobPostings
                 .Include(jp => jp.Portal)
+                .Include(jp => jp.Company)
                 .FirstOrDefaultAsync(jp => jp.JobPostingID == id);
         }
 
@@ -74,6 +76,7 @@ namespace JobAggregator.Api.Data.Repositories.Implementations
         {
             return await _context.JobPostings
                 .Include(jp => jp.Portal)
+                .Include(jp => jp.Company)
                 .OrderByDescending(jp => jp.CreatedDate)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
@@ -103,8 +106,9 @@ namespace JobAggregator.Api.Data.Repositories.Implementations
         public async Task<IEnumerable<string>> GetCompanyNamesSuggestionsAsync(string term)
         {
             return await _context.JobPostings
-                .Where(jp => jp.CompanyName.Contains(term))
-                .Select(jp => jp.CompanyName)
+                .Include(jp => jp.Company)
+                .Where(jp => jp.Company.CompanyName.Contains(term))
+                .Select(jp => jp.Company.CompanyName)
                 .Distinct()
                 .Take(10)
                 .ToListAsync();
@@ -131,5 +135,21 @@ namespace JobAggregator.Api.Data.Repositories.Implementations
             await _context.SaveChangesAsync();
         }
 
+        public async Task<Company> GetCompanyByNameAsync(string companyName)
+        {
+            return await _context.Companies.FirstOrDefaultAsync(c => c.CompanyName == companyName);
+        }
+
+        public async Task AddCompanyAsync(Company company)
+        {
+            await _context.Companies.AddAsync(company);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<bool> ExistsByExternalIdAsync(string externalId)
+        {
+            return await _context.JobPostings
+                .AnyAsync(jp => jp.ExternalID == externalId);
+        }
     }
 }

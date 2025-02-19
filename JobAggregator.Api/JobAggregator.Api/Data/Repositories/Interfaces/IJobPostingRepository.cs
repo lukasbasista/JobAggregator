@@ -16,5 +16,8 @@ namespace JobAggregator.Api.Data.Repositories.Interfaces
         Task<bool> IDExistsAsync(string externalId);
         Task<Portal> GetPortalByNameAsync(string portalName);
         Task AddPortalAsync(Portal portal);
+        Task<Company> GetCompanyByNameAsync(string companyName);
+        Task AddCompanyAsync(Company company);
+        Task<bool> ExistsByExternalIdAsync(string externalId);
     }
 }
