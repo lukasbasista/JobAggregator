@@ -36,7 +36,9 @@ namespace JobAggregator.Api.Data.Repositories.Implementations
 
             if (!string.IsNullOrEmpty(criteria.Keywords))
             {
-                query = query.Where(j => j.Title!.Contains(criteria.Keywords) || j.Description!.Contains(criteria.Keywords));
+                var lowerKeywords = criteria.Keywords.ToLower();
+                query = query.Where(j => (j.Title != null && j.Title.ToLower().Contains(lowerKeywords))
+                                    || (j.Description != null && j.Description.ToLower().Contains(lowerKeywords)));
             }
 
             if (!string.IsNullOrEmpty(criteria.Location))
@@ -47,16 +49,18 @@ namespace JobAggregator.Api.Data.Repositories.Implementations
 
             if (!string.IsNullOrEmpty(criteria.JobType))
             {
-                query = query.Where(j => j.JobType != null && j.JobType.Contains(criteria.JobType));
+                var lowerJobType = criteria.JobType.ToLower();
+                query = query.Where(j => j.JobType != null && j.JobType.ToLower().Contains(lowerJobType));
             }
 
             if (!string.IsNullOrEmpty(criteria.CompanyName))
             {
-                query = query.Where(j => j.Company != null && j.Company.CompanyName != null && j.Company.CompanyName.Contains(criteria.CompanyName));
+                var lowerCompanyName = criteria.CompanyName.ToLower();
+                query = query.Where(j => j.Company != null && j.Company.CompanyName != null && j.Company.CompanyName.ToLower().Contains(lowerCompanyName));
             }
 
             query = query
-                .OrderByDescending(jp => jp.CreatedDate)
+                .OrderByDescending(jp => jp.LastUpdatedDate)
                 .Include(jp => jp.Portal)
                 .Include(jp => jp.Company)
                 .Skip((pageNumber - 1) * pageSize)
@@ -70,6 +74,7 @@ namespace JobAggregator.Api.Data.Repositories.Implementations
             return await _context.JobPostings
                 .Include(jp => jp.Portal)
                 .Include(jp => jp.Company)
+                .OrderByDescending(jp => jp.LastUpdatedDate)
                 .FirstOrDefaultAsync(jp => jp.JobPostingID == id);
         }
 
@@ -78,7 +83,7 @@ namespace JobAggregator.Api.Data.Repositories.Implementations
             return await _context.JobPostings
                 .Include(jp => jp.Portal)
                 .Include(jp => jp.Company)
-                .OrderByDescending(jp => jp.CreatedDate)
+                .OrderByDescending(jp => jp.LastUpdatedDate)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
