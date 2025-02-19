@@ -67,7 +67,7 @@ namespace JobAggregator.Api.Helpers
             };
         }
 
-        public override IdentityError InvalidEmail(string email)
+        public override IdentityError InvalidEmail(string? email)
         {
             return new IdentityError
             {
@@ -76,7 +76,7 @@ namespace JobAggregator.Api.Helpers
             };
         }
 
-        public override IdentityError InvalidUserName(string userName)
+        public override IdentityError InvalidUserName(string? userName)
         {
             return new IdentityError
             {

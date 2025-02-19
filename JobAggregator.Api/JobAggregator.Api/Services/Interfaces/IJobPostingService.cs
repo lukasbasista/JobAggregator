@@ -6,7 +6,7 @@ namespace JobAggregator.Api.Services.Interfaces
     {
         Task AddJobPostingsAsync(IEnumerable<JobPosting> postings);
         Task<IEnumerable<JobPosting>> SearchAsync(SearchCriteria criteria, int pageNumber, int pageSize);
-        Task<JobPosting> GetByIdAsync(int id);
+        Task<JobPosting?> GetByIdAsync(int id);
         Task<IEnumerable<JobPosting>> GetLatestJobPostingsAsync(int pageNumber, int pageSize);
         Task<IEnumerable<string>> GetKeywordSuggestionsAsync(string term);
         Task<IEnumerable<string>> GetJobTypesSuggestionsAsync(string term);

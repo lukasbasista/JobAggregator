@@ -44,7 +44,7 @@ namespace JobAggregator.Api.Services.Implementations
             return jobNodes != null ? jobNodes.Cast<HtmlNode>() : Enumerable.Empty<HtmlNode>();
         }
 
-        protected override string ExtractJobUrl(HtmlNode jobListing)
+        protected override string? ExtractJobUrl(HtmlNode jobListing)
         {
             var titleNode = jobListing.SelectSingleNode(".//a[@data-qa='search-result-position-title']");
             if (titleNode == null)

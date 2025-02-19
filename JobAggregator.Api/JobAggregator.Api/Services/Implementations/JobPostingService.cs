@@ -17,7 +17,7 @@ namespace JobAggregator.Api.Services.Implementations
         {
             foreach (var posting in postings)
             {
-                if (!await _repository.ExistsAsync(posting.HashCode))
+                if (posting.HashCode != null && !await _repository.ExistsAsync(posting.HashCode))
                 {
                     await _repository.AddAsync(posting);
                 }
@@ -29,7 +29,7 @@ namespace JobAggregator.Api.Services.Implementations
             return await _repository.SearchAsync(criteria, pageNumber, pageSize);
         }
 
-        public async Task<JobPosting> GetByIdAsync(int id)
+        public async Task<JobPosting?> GetByIdAsync(int id)
         {
             return await _repository.GetByIdAsync(id);
         }

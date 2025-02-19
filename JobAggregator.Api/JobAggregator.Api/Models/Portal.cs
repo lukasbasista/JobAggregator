@@ -10,6 +10,6 @@
         public DateTime LastUpdatedDate { get; set; }
         public string? PortalLogoUrl { get; set; }
 
-        public virtual ICollection<JobPosting> JobPostings { get; set; }
+        public virtual ICollection<JobPosting>? JobPostings { get; set; }
     }
 }

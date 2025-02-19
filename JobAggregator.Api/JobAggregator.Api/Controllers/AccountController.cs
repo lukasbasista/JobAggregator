@@ -71,6 +71,10 @@ namespace JobAggregator.Api.Controllers
         public async Task<IActionResult> GetProfile()
         {
             var userId = User.FindFirst("id")?.Value;
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
             var user = await _userManager.FindByIdAsync(userId);
 
             if (user == null) return NotFound();
@@ -95,6 +99,10 @@ namespace JobAggregator.Api.Controllers
         public async Task<IActionResult> UpdateProfile(UserProfileDTO model)
         {
             var userId = User.FindFirst("id")?.Value;
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
             var user = await _userManager.FindByIdAsync(userId);
 
             if (user == null) return NotFound();
@@ -117,10 +125,10 @@ namespace JobAggregator.Api.Controllers
         private string GenerateJwtToken(ApplicationUser user)
         {
             var userClaims = new List<Claim>
-                {
-                    new Claim("id", user.Id),
-                    new Claim("username", user.UserName),
-                };
+            {
+                new Claim("id", user.Id!),
+                new Claim("username", user.UserName!)
+            };
 
             var roles = _userManager.GetRolesAsync(user).Result;
             var roleClaims = roles.Select(role => new Claim("role", role));
@@ -129,7 +137,8 @@ namespace JobAggregator.Api.Controllers
 
             var identity = new ClaimsIdentity(claims);
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JwtSettings:SecretKey"]));
+            var secretKey = _configuration["JwtSettings:SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey is missing");
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var tokenDescriptor = new SecurityTokenDescriptor

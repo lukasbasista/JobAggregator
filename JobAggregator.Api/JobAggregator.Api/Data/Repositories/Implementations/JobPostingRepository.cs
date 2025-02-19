@@ -1,4 +1,5 @@
-﻿using JobAggregator.Api.Data.Repositories.Interfaces;
+﻿#nullable enable
+using JobAggregator.Api.Data.Repositories.Interfaces;
 using JobAggregator.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -35,23 +36,23 @@ namespace JobAggregator.Api.Data.Repositories.Implementations
 
             if (!string.IsNullOrEmpty(criteria.Keywords))
             {
-                query = query.Where(j => j.Title.Contains(criteria.Keywords) || j.Description.Contains(criteria.Keywords));
+                query = query.Where(j => j.Title!.Contains(criteria.Keywords) || j.Description!.Contains(criteria.Keywords));
             }
 
             if (!string.IsNullOrEmpty(criteria.Location))
             {
                 var location = criteria.Location.Trim().ToLower();
-                query = query.Where(j => j.Location.ToLower().Contains(location));
+                query = query.Where(j => j.Location!.ToLower().Contains(location));
             }
 
             if (!string.IsNullOrEmpty(criteria.JobType))
             {
-                query = query.Where(j => j.JobType.Contains(criteria.JobType));
+                query = query.Where(j => j.JobType != null && j.JobType.Contains(criteria.JobType));
             }
 
             if (!string.IsNullOrEmpty(criteria.CompanyName))
             {
-                query = query.Where(j => j.Company != null && j.Company.CompanyName.Contains(criteria.CompanyName));
+                query = query.Where(j => j.Company != null && j.Company.CompanyName != null && j.Company.CompanyName.Contains(criteria.CompanyName));
             }
 
             query = query
@@ -64,7 +65,7 @@ namespace JobAggregator.Api.Data.Repositories.Implementations
             return await query.ToListAsync();
         }
 
-        public async Task<JobPosting> GetByIdAsync(int id)
+        public async Task<JobPosting?> GetByIdAsync(int id)
         {
             return await _context.JobPostings
                 .Include(jp => jp.Portal)
@@ -86,8 +87,8 @@ namespace JobAggregator.Api.Data.Repositories.Implementations
         public async Task<IEnumerable<string>> GetKeywordSuggestionsAsync(string term)
         {
             return await _context.JobPostings
-                .Where(jp => jp.Title.Contains(term))
-                .Select(jp => jp.Title)
+                .Where(jp => jp.Title != null && jp.Title.Contains(term))
+                .Select(jp => jp.Title!)
                 .Distinct()
                 .Take(10)
                 .ToListAsync();
@@ -96,8 +97,8 @@ namespace JobAggregator.Api.Data.Repositories.Implementations
         public async Task<IEnumerable<string>> GetJobTypesSuggestionsAsync(string term)
         {
             return await _context.JobPostings
-                .Where(jp => jp.JobType.Contains(term))
-                .Select(jp => jp.JobType)
+                .Where(jp => jp.JobType != null && jp.JobType.Contains(term))
+                .Select(jp => jp.JobType!)
                 .Distinct()
                 .Take(10)
                 .ToListAsync();
@@ -107,8 +108,8 @@ namespace JobAggregator.Api.Data.Repositories.Implementations
         {
             return await _context.JobPostings
                 .Include(jp => jp.Company)
-                .Where(jp => jp.Company.CompanyName.Contains(term))
-                .Select(jp => jp.Company.CompanyName)
+                .Where(jp => jp.Company != null && jp.Company.CompanyName != null && jp.Company.CompanyName.Contains(term))
+                .Select(jp => jp.Company!.CompanyName!)
                 .Distinct()
                 .Take(10)
                 .ToListAsync();
@@ -117,14 +118,14 @@ namespace JobAggregator.Api.Data.Repositories.Implementations
         public async Task<IEnumerable<string>> GetLocationSuggestionsAsync(string term)
         {
             return await _context.JobPostings
-                .Where(jp => jp.Location.Contains(term))
-                .Select(jp => jp.Location)
+                .Where(jp => jp.Location != null && jp.Location.Contains(term))
+                .Select(jp => jp.Location!)
                 .Distinct()
                 .Take(10)
                 .ToListAsync();
         }
 
-        public async Task<Portal> GetPortalByNameAsync(string portalName)
+        public async Task<Portal?> GetPortalByNameAsync(string portalName)
         {
             return await _context.Portals.FirstOrDefaultAsync(p => p.PortalName == portalName);
         }
@@ -135,7 +136,7 @@ namespace JobAggregator.Api.Data.Repositories.Implementations
             await _context.SaveChangesAsync();
         }
 
-        public async Task<Company> GetCompanyByNameAsync(string companyName)
+        public async Task<Company?> GetCompanyByNameAsync(string companyName)
         {
             return await _context.Companies.FirstOrDefaultAsync(c => c.CompanyName == companyName);
         }

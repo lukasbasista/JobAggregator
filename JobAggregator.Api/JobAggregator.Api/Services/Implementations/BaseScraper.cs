@@ -38,7 +38,6 @@ namespace JobAggregator.Api.Services.Implementations
             var processedCompanies = new ConcurrentDictionary<string, Lazy<Task<Company>>>();
             int pageNumber = 1;
 
-            // Možnosť definovať maximálny počet strán – ak je potrebné, možno sprístupniť cez virtuálnu vlastnosť.
             while (pageNumber <= MaxPages)
             {
                 var pageUrl = GetPageUrl(pageNumber);
@@ -50,7 +49,6 @@ namespace JobAggregator.Api.Services.Implementations
                     break;
                 }
 
-                // Použitie throttleru na paralelné spracovanie (nastaviteľná hodnota)
                 using var throttler = new SemaphoreSlim(MaxDegreeOfParallelism);
                 var tasks = listings.Select(async listing =>
                 {
@@ -74,37 +72,37 @@ namespace JobAggregator.Api.Services.Implementations
         }
 
         /// <summary>
-        /// Maximálny počet strán, ktoré sa majú prejsť – možno predefinovať v odvodených triedach.
+        /// Maximum number of pages to process – can be overridden in derived classes.
         /// </summary>
         protected virtual int MaxPages => 2;
 
         /// <summary>
-        /// Maximálny počet paralelných vlákien na spracovanie inzerátov.
+        /// Maximum number of parallel threads for processing job postings.
         /// </summary>
         protected virtual int MaxDegreeOfParallelism => 10;
 
         /// <summary>
-        /// Vráti URL stránky pre dané číslo stránky.
+        /// Returns the URL of the page for the given page number.
         /// </summary>
         protected abstract string GetPageUrl(int pageNumber);
 
         /// <summary>
-        /// Zo zadaného URL načíta HTML a vráti kolekciu HTML uzlov predstavujúcich jednotlivé pracovné inzeráty.
+        /// Downloads the HTML from the specified URL and returns a collection of HTML nodes representing individual job postings.
         /// </summary>
         protected abstract Task<IEnumerable<HtmlNode>> GetJobListingsAsync(string url);
 
         /// <summary>
-        /// Zo zadaného uzla extrahuje URL detailu pracovného inzerátu.
+        /// Extracts the URL of the job posting details from the specified node.
         /// </summary>
-        protected abstract string ExtractJobUrl(HtmlNode jobListing);
+        protected abstract string? ExtractJobUrl(HtmlNode jobListing);
 
         /// <summary>
-        /// Pre dané URL vráti obsah detailu inzerátu ako text (prípadne so špecifickým spracovaním).
+        /// For the given URL, returns the content of the job posting detail as text (with optional specific processing).
         /// </summary>
         protected abstract Task<string> GetJobContentAsync(string jobUrl);
 
         /// <summary>
-        /// Spoločná logika pre spracovanie jedného pracovného inzerátu.
+        /// Common logic for processing a single job posting.
         /// </summary>
         protected async Task ProcessJobListingAsync(HtmlNode listing, ConcurrentBag<JobPosting> jobPostings, ConcurrentDictionary<string, Lazy<Task<Company>>> processedCompanies)
         {
@@ -194,7 +192,7 @@ namespace JobAggregator.Api.Services.Implementations
 
         protected string GenerateExternalId(string url) => HashHelper.ComputeSha256Hash(url);
 
-        protected async Task<JobPosting> MapJobDataToJobPostingAsync(JobPostingData jobData, Company company)
+        protected Task<JobPosting> MapJobDataToJobPostingAsync(JobPostingData jobData, Company company)
         {
             var jobPosting = new JobPosting
             {
@@ -216,7 +214,7 @@ namespace JobAggregator.Api.Services.Implementations
             };
 
             jobPosting.HashCode = HashHelper.ComputeSha256Hash(jobPosting.Title + jobPosting.ApplyUrl);
-            return jobPosting;
+            return Task.FromResult(jobPosting);
         }
 
         protected async Task EnsurePortalExistsAsync()
@@ -249,7 +247,7 @@ namespace JobAggregator.Api.Services.Implementations
             using var scope = _serviceProvider.CreateScope();
             var repository = scope.ServiceProvider.GetRequiredService<IJobPostingRepository>();
 
-            bool exists = await repository.ExistsAsync(jobPosting.HashCode);
+            bool exists = await repository.ExistsAsync(jobPosting.HashCode!);
             if (exists)
             {
                 _logger.LogInformation("Inzerát s HashCode {HashCode} už existuje.", jobPosting.HashCode);

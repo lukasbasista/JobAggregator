@@ -43,7 +43,7 @@ namespace JobAggregator.Api.Services.Implementations
             return jobNodes ?? Enumerable.Empty<HtmlNode>();
         }
 
-        protected override string ExtractJobUrl(HtmlNode jobListing)
+        protected override string? ExtractJobUrl(HtmlNode jobListing)
         {
             var linkNode = jobListing.SelectSingleNode(".//a[@href]");
             var relativeUrl = linkNode?.GetAttributeValue("href", null);
@@ -56,7 +56,7 @@ namespace JobAggregator.Api.Services.Implementations
                 : $"{PortalInfo.BaseUrl.TrimEnd('/')}{relativeUrl}";
         }
 
-        protected override async Task<string> GetJobContentAsync(string jobUrl)
+        protected override async Task<string?> GetJobContentAsync(string jobUrl)
         {
             var response = await _httpClient.GetAsync(jobUrl);
             if (!response.IsSuccessStatusCode)
