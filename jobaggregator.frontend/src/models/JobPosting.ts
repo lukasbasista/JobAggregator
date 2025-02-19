@@ -2,21 +2,22 @@ export interface JobPosting {
   jobPostingID: number;
   title: string;
   companyName: string;
+  currency: string;
   location: string;
   description: string;
-  postedDate: string;
   applyUrl: string;
   portalID: number;
   externalID: string;
   dateScraped: string;
   hashCode: string;
-  salary?: string;
+  salaryFrom?: number;
+  salaryTo?: number;
   jobType: string;
   isActive: boolean;
   createdDate: string;
   lastUpdatedDate: string;
-  companyLogoUrl?: string;
   portal?: Portal;
+  company?: Company;
 }
 
 export interface Portal {
@@ -29,3 +30,18 @@ export interface Portal {
   portalLogoUrl?: string;
 }
   
+
+export interface Company {
+  companyID: number;
+  companyName: string;
+  description?: string;
+  logoUrl?: string;
+  websiteUrl?: string;
+  createdDate: string;
+  lastUpdatedDate: string;
+  foundedYear?: string;
+  headquarters?: string;
+  industry?: string;
+  numberOfEmployees?: string;
+
+}

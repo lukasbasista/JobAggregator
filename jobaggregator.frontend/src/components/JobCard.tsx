@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Card,
   CardContent,
@@ -7,9 +7,11 @@ import {
   CardMedia,
 } from "@mui/material";
 import { JobPosting } from "../models/JobPosting";
-import { format } from "date-fns";
+import { differenceInCalendarDays, format } from "date-fns";
 import { cs } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
+import SalaryDisplay from "./SalaryDisplay";
+import JobImage from "./JobImage";
 
 interface JobCardProps {
   job: JobPosting;
@@ -18,12 +20,16 @@ interface JobCardProps {
 const JobCard: React.FC<JobCardProps> = ({ job }) => {
   const navigate = useNavigate();
 
+  const createdDate = new Date(job.createdDate);
+  const diffDays = differenceInCalendarDays(new Date(), createdDate);
+  const formattedDate =
+    diffDays === 0 ? "Dnes" : diffDays === 1 ? "Včera" : format(createdDate, "d. MMMM yyyy", { locale: cs });
+
+
+
   const handleClick = () => {
     navigate(`/job/${job.jobPostingID}`);
   };
-
-  const imageUrl = job.companyLogoUrl || job.portal?.portalLogoUrl || "https://via.placeholder.com/150";
-
 
   return (
     <Card
@@ -39,16 +45,10 @@ const JobCard: React.FC<JobCardProps> = ({ job }) => {
       }}
     >
       <CardActionArea onClick={handleClick} sx={{ flexGrow: 1 }}>
-      <CardMedia
-          component="img"
-          image={imageUrl}
-          alt={job.companyName || "Company Logo"}
-          sx={{
-            height: 140,
-            objectFit: "contain",
-            objectPosition: "center",
-            backgroundColor: "#f5f5f5",
-          }}
+      <JobImage
+          companyLogo={job.company?.logoUrl}
+          portalLogo={job.portal?.portalLogoUrl}
+          alt={job.company?.companyName || "Company Logo"}
         />
         <CardContent>
           <Typography variant="h5" component="div" gutterBottom>
@@ -60,15 +60,9 @@ const JobCard: React.FC<JobCardProps> = ({ job }) => {
           <Typography variant="body2" color="text.secondary">
             {job.location}
           </Typography>
-          <Typography
-            variant="h6"
-            sx={{ color: "green", fontWeight: "bold", mt: 1 }}
-          >
-            {job.salary}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Přidáno:{" "}
-            {format(new Date(job.createdDate), "d. MMMM yyyy", { locale: cs })}
+          <SalaryDisplay salaryFrom={job.salaryFrom} salaryTo={job.salaryTo} currency={job.currency} />
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1, textAlign: "right" }}>
+            Přidáno: {formattedDate}
           </Typography>
         </CardContent>
       </CardActionArea>
