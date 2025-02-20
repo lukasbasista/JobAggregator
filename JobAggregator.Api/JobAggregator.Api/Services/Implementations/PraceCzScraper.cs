@@ -25,7 +25,11 @@ namespace JobAggregator.Api.Services.Implementations
 
         protected override string GetPageUrl(int pageNumber) => $"/nabidky/?page={pageNumber}";
 
-        protected override int MaxPages => 1;
+        protected override int MaxPages => 5;
+        private const int MinimumContentLength = 200;
+        private const int PlaywrightTimeout = 60000;
+        private const int LoaderTimeout = 10000;
+        private const int ContentSelectorTimeout = 25000;
 
         protected override async Task<IEnumerable<HtmlNode>> GetJobListingsAsync(string url)
         {
@@ -46,14 +50,18 @@ namespace JobAggregator.Api.Services.Implementations
 
         protected override string? ExtractJobUrl(HtmlNode jobListing)
         {
-            var titleNode = jobListing.SelectSingleNode(".//a[@data-qa='search-result-position-title']");
+            string[] xpaths = {
+                ".//a[@data-qa='search-result-position-title']",
+                ".//h3[contains(@class, 'half-standalone')]/a",
+                ".//a[@href]"
+            };
+
+            var titleNode = GetFirstMatchingNode(jobListing, xpaths);
+
             if (titleNode == null)
             {
-                titleNode = jobListing.SelectSingleNode(".//h3[contains(@class, 'half-standalone')]/a");
-            }
-            if (titleNode == null)
-            {
-                titleNode = jobListing.SelectSingleNode(".//a[@href]");
+                _logger.LogWarning("Could not retrieve URL from job listing.");
+                return null;
             }
             var relativeUrl = titleNode?.GetAttributeValue("href", null);
             if (string.IsNullOrEmpty(relativeUrl))
@@ -80,6 +88,19 @@ namespace JobAggregator.Api.Services.Implementations
             }
         }
 
+        private HtmlNode? GetFirstMatchingNode(HtmlNode jobListing, string[] xpaths)
+        {
+            foreach (var xpath in xpaths)
+            {
+                var node = jobListing.SelectSingleNode(xpath);
+                if (node != null)
+                {
+                    return node;
+                }
+            }
+            return null;
+        }
+
         protected override async Task<string> GetJobContentAsync(string jobUrl)
         {
             var response = await _httpClient.GetAsync(jobUrl);
@@ -100,7 +121,7 @@ namespace JobAggregator.Api.Services.Implementations
                 return await GetExternalJobContentWithPlaywrightAsync(finalUri.ToString());
             }
 
-            if (string.IsNullOrWhiteSpace(pageContent) || pageContent.Length < 200)
+            if (string.IsNullOrWhiteSpace(pageContent) || pageContent.Length < MinimumContentLength)
             {
                 _logger.LogWarning("Content from prace.cz is too short ({Length} characters). Attempting fallback with Playwright on {Url}", pageContent?.Length, finalUri);
                 return await GetExternalJobContentWithPlaywrightAsync(finalUri.ToString());
@@ -135,7 +156,7 @@ namespace JobAggregator.Api.Services.Implementations
                 await page.GotoAsync(externalUrl, new PageGotoOptions
                 {
                     WaitUntil = WaitUntilState.NetworkIdle,
-                    Timeout = 60000
+                    Timeout = PlaywrightTimeout
                 });
             }
             catch (TimeoutException tex)
@@ -152,7 +173,7 @@ namespace JobAggregator.Api.Services.Implementations
                 await page.WaitForSelectorAsync(".cp-loader", new PageWaitForSelectorOptions
                 {
                     State = WaitForSelectorState.Detached,
-                    Timeout = 10000
+                    Timeout = LoaderTimeout
                 });
             }
             catch
@@ -166,7 +187,7 @@ namespace JobAggregator.Api.Services.Implementations
                     new PageWaitForSelectorOptions
                     {
                         State = WaitForSelectorState.Attached,
-                        Timeout = 25000
+                        Timeout = ContentSelectorTimeout
                     });
             }
             catch
@@ -201,27 +222,7 @@ namespace JobAggregator.Api.Services.Implementations
 
             string finalUrl = page.Url;
             var finalHost = new Uri(finalUrl).Host;
-            string cookieDomain = finalHost.StartsWith(".") ? finalHost : "." + finalHost;
-            long cookieExpiration = DateTimeOffset.Parse("2026-02-15T18:04:27Z").ToUnixTimeSeconds();
-
-            string levelPart = finalHost.Equals("o2.jobs.cz", StringComparison.OrdinalIgnoreCase)
-                ? "%2C%22analytics%22%2C%22functionality%22%2C%22ad%22%2C%22personalization%22"
-                : string.Empty;
-            string cookieValue = "%7B%22level%22%3A%5B%22necessary%22" + levelPart +
-                                 "%5D%2C%22revision%22%3A1%2C%22data%22%3A%7B%22serviceName%22%3A%22CP_" + finalHost +
-                                 "%22%2C%22uid%22%3A%22ZZwnHpVc0CsRZS6AkDcwA%22%7D%2C%22rfc_cookie%22%3Atrue%7D";
-
-            var cookie = new PlaywrightCookie
-            {
-                Name = "lmc_ccm",
-                Value = cookieValue,
-                Domain = cookieDomain,
-                Path = "/",
-                Expires = cookieExpiration,
-                HttpOnly = false,
-                Secure = true,
-                SameSite = SameSiteAttribute.Lax
-            };
+            var cookie = CreateCookieForHost(finalHost);
 
             await context.AddCookiesAsync(new[] { cookie });
 
@@ -253,7 +254,7 @@ namespace JobAggregator.Api.Services.Implementations
             {
                 sections = htmlDoc.DocumentNode.SelectNodes("//section[contains(@class, 'cp-detail')]");
             }
-                HtmlNode contentNode;
+            HtmlNode contentNode;
             if (sections == null || sections.Count == 0)
             {
                 contentNode = htmlDoc.DocumentNode.SelectSingleNode("//body");
@@ -278,36 +279,7 @@ namespace JobAggregator.Api.Services.Implementations
             if (contentNode == null)
                 return string.Empty;
 
-            var sanitizer = new HtmlSanitizer();
-            sanitizer.AllowedTags.Clear();
-            sanitizer.AllowedTags.Add("div");
-            sanitizer.AllowedTags.Add("span");
-            sanitizer.AllowedTags.Add("p");
-            sanitizer.AllowedTags.Add("h1");
-            sanitizer.AllowedTags.Add("h2");
-            sanitizer.AllowedTags.Add("h3");
-            sanitizer.AllowedTags.Add("h4");
-            sanitizer.AllowedTags.Add("h5");
-            sanitizer.AllowedTags.Add("h6");
-            sanitizer.AllowedTags.Add("article");
-            sanitizer.AllowedTags.Add("section");
-            sanitizer.AllowedTags.Add("blockquote");
-            sanitizer.AllowedTags.Add("pre");
-            sanitizer.AllowedTags.Add("code");
-            sanitizer.AllowedTags.Add("ul");
-            sanitizer.AllowedTags.Add("ol");
-            sanitizer.AllowedTags.Add("li");
-            sanitizer.AllowedTags.Add("br");
-            sanitizer.AllowedTags.Add("strong");
-            sanitizer.AllowedTags.Add("em");
-            sanitizer.AllowedTags.Add("a");
-            sanitizer.AllowedTags.Add("table");
-            sanitizer.AllowedTags.Add("thead");
-            sanitizer.AllowedTags.Add("tbody");
-            sanitizer.AllowedTags.Add("tfoot");
-            sanitizer.AllowedTags.Add("tr");
-            sanitizer.AllowedTags.Add("th");
-            sanitizer.AllowedTags.Add("td");
+            var sanitizer = GetConfiguredSanitizer();
 
             var nodesToRemove = htmlDoc.DocumentNode.SelectNodes(
                 "//*[contains(local-name(), 'script') or contains(local-name(), 'style') or contains(local-name(), 'img') or contains(local-name(), 'svg') or " +
@@ -348,6 +320,19 @@ namespace JobAggregator.Api.Services.Implementations
             }
             var combinedHtml = sb.ToString();
 
+            var sanitizer = GetConfiguredSanitizer();
+
+            var sanitized = sanitizer.Sanitize(combinedHtml);
+            var finalContent = HtmlEntity.DeEntitize(sanitized).Trim();
+            if (finalContent.Length < 100)
+            {
+                _logger.LogWarning("Extracted content is very short: {Length} characters.", finalContent.Length);
+            }
+            return finalContent;
+        }
+
+        private HtmlSanitizer GetConfiguredSanitizer()
+        {
             var sanitizer = new HtmlSanitizer();
             sanitizer.AllowedTags.Clear();
             sanitizer.AllowedTags.Add("div");
@@ -378,14 +363,31 @@ namespace JobAggregator.Api.Services.Implementations
             sanitizer.AllowedTags.Add("tr");
             sanitizer.AllowedTags.Add("th");
             sanitizer.AllowedTags.Add("td");
+            return sanitizer;
+        }
 
-            var sanitized = sanitizer.Sanitize(combinedHtml);
-            var finalContent = HtmlEntity.DeEntitize(sanitized).Trim();
-            if (finalContent.Length < 100)
+        private PlaywrightCookie CreateCookieForHost(string finalHost)
+        {
+            string cookieDomain = finalHost.StartsWith(".") ? finalHost : "." + finalHost;
+            long cookieExpiration = DateTimeOffset.Parse("2026-02-15T18:04:27Z").ToUnixTimeSeconds();
+            string levelPart = finalHost.Equals("o2.jobs.cz", StringComparison.OrdinalIgnoreCase)
+                ? "%2C%22analytics%22%2C%22functionality%22%2C%22ad%22%2C%22personalization%22"
+                : string.Empty;
+            string cookieValue = "%7B%22level%22%3A%5B%22necessary%22" + levelPart +
+                                 "%5D%2C%22revision%22%3A1%2C%22data%22%3A%7B%22serviceName%22%3A%22CP_" + finalHost +
+                                 "%22%2C%22uid%22%3A%22ZZwnHpVc0CsRZS6AkDcwA%22%7D%2C%22rfc_cookie%22%3Atrue%7D";
+
+            return new PlaywrightCookie
             {
-                _logger.LogWarning("Extracted content is very short: {Length} characters.", finalContent.Length);
-            }
-            return finalContent;
+                Name = "lmc_ccm",
+                Value = cookieValue,
+                Domain = cookieDomain,
+                Path = "/",
+                Expires = cookieExpiration,
+                HttpOnly = false,
+                Secure = true,
+                SameSite = SameSiteAttribute.Lax
+            };
         }
     }
 }

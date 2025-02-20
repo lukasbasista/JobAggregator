@@ -29,6 +29,9 @@ namespace JobAggregator.Api.Services.Implementations
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36");
         }
 
+        /// <summary>
+        /// Scrapes job postings concurrently across pages.
+        /// </summary>
         public virtual async Task<IEnumerable<JobPosting>> ScrapeAsync()
         {
             _logger.LogInformation("Starting scrape for {PortalName}", PortalInfo.PortalName);
@@ -36,7 +39,7 @@ namespace JobAggregator.Api.Services.Implementations
 
             var jobPostings = new ConcurrentBag<JobPosting>();
             var processedCompanies = new ConcurrentDictionary<string, Lazy<Task<Company>>>();
-            int pageNumber = 1;
+            int pageNumber = 5;
 
             while (pageNumber <= MaxPages)
             {
@@ -45,7 +48,7 @@ namespace JobAggregator.Api.Services.Implementations
 
                 if (listings == null || !listings.Any())
                 {
-                    _logger.LogInformation("Žiadne ďalšie inzeráty nájdené na stránke {PageNumber}", pageNumber);
+                    _logger.LogInformation("No further job postings found on page {PageNumber}", pageNumber);
                     break;
                 }
 
@@ -67,7 +70,7 @@ namespace JobAggregator.Api.Services.Implementations
                 pageNumber++;
             }
 
-            _logger.LogInformation("Scraping pre {PortalName} skončený. Celkom nájdených inzerátov: {Count}", PortalInfo.PortalName, jobPostings.Count);
+            _logger.LogInformation("Scraping for {PortalName} completed. Total job postings found: {Count}\"", PortalInfo.PortalName, jobPostings.Count);
             return jobPostings.ToList();
         }
 
@@ -82,55 +85,65 @@ namespace JobAggregator.Api.Services.Implementations
         protected virtual int MaxDegreeOfParallelism => 10;
 
         /// <summary>
-        /// Returns the URL of the page for the given page number.
+        /// Returns URL of the page for specified page number.
         /// </summary>
+        /// <param name="pageNumber">page number.</param>
+        /// <returns>String with page URL.</returns>
         protected abstract string GetPageUrl(int pageNumber);
 
         /// <summary>
-        /// Downloads the HTML from the specified URL and returns a collection of HTML nodes representing individual job postings.
+        /// Downloads HTML from the specified URL and returns HTML nodes representing job postings.
         /// </summary>
+        /// <param name="url">URL to download from.</param>
         protected abstract Task<IEnumerable<HtmlNode>> GetJobListingsAsync(string url);
 
         /// <summary>
-        /// Extracts the URL of the job posting details from the specified node.
+        /// Extracts job posting detail URL from given HTML node.
         /// </summary>
+        /// <param name="jobListing">HTML node representing job listing.</param>
+        /// <returns>String containing job URL, or null if not found.</returns>
         protected abstract string? ExtractJobUrl(HtmlNode jobListing);
 
         /// <summary>
-        /// For the given URL, returns the content of the job posting detail as text (with optional specific processing).
+        /// Retrieves job posting detail content as text from the specified URL.
         /// </summary>
+        /// <param name="jobUrl">URL of the job posting detail.</param>
+        /// <returns>Task that returns job posting content.</returns>
         protected abstract Task<string> GetJobContentAsync(string jobUrl);
 
         /// <summary>
-        /// Common logic for processing a single job posting.
+        /// Processes a single job listing node by extracting, parsing, and mapping it to JobPosting object.
         /// </summary>
+        /// <param name="listing">HTML node of the job listing.</param>
+        /// <param name="jobPostings">concurrent collection to add the JobPosting to.</param>
+        /// <param name="processedCompanies">dictionary to track processed companies.</param>
         protected async Task ProcessJobListingAsync(HtmlNode listing, ConcurrentBag<JobPosting> jobPostings, ConcurrentDictionary<string, Lazy<Task<Company>>> processedCompanies)
         {
             var jobUrl = ExtractJobUrl(listing);
             if (string.IsNullOrEmpty(jobUrl))
             {
-                _logger.LogWarning("Nebolo možné získať URL z inzerátu.");
+                _logger.LogWarning("Could not extract URL from job listing.");
                 return;
             }
 
             var externalId = GenerateExternalId(jobUrl);
             if (await JobExistsByExternalIdAsync(externalId))
             {
-                _logger.LogInformation("Inzerát s ExternalID {ExternalID} už existuje.", externalId);
+                _logger.LogInformation("Job posting with ExternalID {ExternalID} already exists.", externalId);
                 return;
             }
 
             var jobContent = await GetJobContentAsync(jobUrl);
             if (string.IsNullOrEmpty(jobContent))
             {
-                _logger.LogWarning("Obsah inzerátu z URL {JobUrl} je prázdny.", jobUrl);
+                _logger.LogWarning("Job content from URL {JobUrl} is empty.", jobUrl);
                 return;
             }
 
             var jobData = await _gptJobParser.ParseJobAsync(jobContent, jobUrl, PortalInfo.PortalName, PortalInfo.BaseUrl);
             if (jobData == null)
             {
-                _logger.LogWarning("Neúspešné parsovanie inzerátu z URL {JobUrl}.", jobUrl);
+                _logger.LogWarning("Failed to parse job posting from URL {JobUrl}.", jobUrl);
                 return;
             }
 
@@ -146,8 +159,12 @@ namespace JobAggregator.Api.Services.Implementations
             }
         }
 
-        #region Spoločné metódy (nemeniť)
+        #region Common methods
 
+        /// <summary>
+        /// Retrieves an existing Company by name or creates one if doesn't exist.
+        /// </summary>
+        /// <param name="companyName">name of the company.</param>
         protected async Task<Company> GetOrCreateCompanyAsync(string companyName)
         {
             using var scope = _serviceProvider.CreateScope();
@@ -156,7 +173,7 @@ namespace JobAggregator.Api.Services.Implementations
             var company = await repository.GetCompanyByNameAsync(companyName);
             if (company == null)
             {
-                _logger.LogInformation("Vytváram novú spoločnosť: {CompanyName}", companyName);
+                _logger.LogInformation("Creating new company: {CompanyName}", companyName);
                 var companyData = await _gptJobParser.ParseCompanyAsync(companyName);
                 company = companyData == null
                     ? new Company
@@ -192,6 +209,11 @@ namespace JobAggregator.Api.Services.Implementations
 
         protected string GenerateExternalId(string url) => HashHelper.ComputeSha256Hash(url);
 
+        /// <summary>
+        /// Maps JobPostingData and Company to a new JobPosting and computes its hash.
+        /// </summary>
+        /// <param name="jobData">parsed job posting data.</param>
+        /// <param name="company">associated Company entity.</param>
         protected Task<JobPosting> MapJobDataToJobPostingAsync(JobPostingData jobData, Company company)
         {
             var jobPosting = new JobPosting
@@ -217,6 +239,9 @@ namespace JobAggregator.Api.Services.Implementations
             return Task.FromResult(jobPosting);
         }
 
+        /// <summary>
+        /// Ensures that portal exists in the database; creates new record if missing.
+        /// </summary>
         protected async Task EnsurePortalExistsAsync()
         {
             using var scope = _serviceProvider.CreateScope();
@@ -225,7 +250,7 @@ namespace JobAggregator.Api.Services.Implementations
             var portal = await repository.GetPortalByNameAsync(PortalInfo.PortalName);
             if (portal == null)
             {
-                _logger.LogInformation("Portal {PortalName} neexistuje v databáze, vytváram nový záznam.", PortalInfo.PortalName);
+                _logger.LogInformation("Portal {PortalName} does not exist in the database, creating a new record.", PortalInfo.PortalName);
                 portal = new Portal
                 {
                     PortalName = PortalInfo.PortalName,
@@ -236,12 +261,16 @@ namespace JobAggregator.Api.Services.Implementations
                     PortalLogoUrl = PortalInfo.PortalLogoUrl
                 };
                 await repository.AddPortalAsync(portal);
-                _logger.LogInformation("Nový portal vytvorený s ID: {PortalID}", portal.PortalID);
+                _logger.LogInformation("New portal created with ID: {PortalID}", portal.PortalID);
             }
 
             PortalInfo.PortalID = portal.PortalID;
         }
 
+        /// <summary>
+        /// Checks if given job posting (by hash code) does not already exist, returns true if new.
+        /// </summary>
+        /// <param name="jobPosting">JobPosting object to check.</param>
         protected async Task<bool> AddJobPostingIfNotExistsAsync(JobPosting jobPosting)
         {
             using var scope = _serviceProvider.CreateScope();
@@ -250,12 +279,16 @@ namespace JobAggregator.Api.Services.Implementations
             bool exists = await repository.ExistsAsync(jobPosting.HashCode!);
             if (exists)
             {
-                _logger.LogInformation("Inzerát s HashCode {HashCode} už existuje.", jobPosting.HashCode);
+                _logger.LogInformation("IJob posting with HashCode {HashCode} already exists.", jobPosting.HashCode);
                 return false;
             }
             return true;
         }
 
+        /// <summary>
+        /// Checks if job posting with the specified external ID exists.
+        /// </summary>
+        /// <param name="externalId">external ID to check.</param>
         protected async Task<bool> JobExistsByExternalIdAsync(string externalId)
         {
             using var scope = _serviceProvider.CreateScope();

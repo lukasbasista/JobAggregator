@@ -30,6 +30,13 @@ namespace JobAggregator.Api.Data.Repositories.Implementations
             await _context.SaveChangesAsync();
         }
 
+        /// <summary>
+        /// Searches job postings based on criteria and pagination.
+        /// </summary>
+        /// <param name="criteria">search criteria.</param>
+        /// <param name="pageNumber">page number.</param>
+        /// <param name="pageSize">number of postings per page.</param>
+        /// <returns>A collection of matching JobPosting objects.</returns>
         public async Task<IEnumerable<JobPosting>> SearchAsync(SearchCriteria criteria, int pageNumber, int pageSize)
         {
             var query = _context.JobPostings.AsQueryable();

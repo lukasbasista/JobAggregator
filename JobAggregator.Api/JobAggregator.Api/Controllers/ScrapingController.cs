@@ -14,6 +14,10 @@ namespace JobAggregator.Api.Controllers
             _scraperManager = scraperManager;
         }
 
+        /// <summary>
+        /// Starts scraping process for all scrapers.
+        /// </summary>
+        /// <returns>An IActionResult indicating success.</returns>
         [HttpPost("start")]
         public async Task<IActionResult> StartScraping()
         {

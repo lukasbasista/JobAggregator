@@ -27,6 +27,11 @@ namespace JobAggregator.Api.Controllers
             _signInManager = signInManager;
         }
 
+        /// <summary>
+        /// Registers new user with provided registration data.
+        /// </summary>
+        /// <param name="model">Registration data (username, email, first name, last name, location, and password).</param>
+        /// <returns>IActionResult indicating success or failure.</returns>
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegisterDTO model)
         {
@@ -51,6 +56,11 @@ namespace JobAggregator.Api.Controllers
             return BadRequest(result.Errors);
         }
 
+        /// <summary>
+        /// Authenticates a user with the provided credentials and returns a JWT token upon successful login.
+        /// </summary>
+        /// <param name="model">Login credentials (username and password).</param>
+        /// <returns>IActionResult containing the JWT token if successful; otherwise Unauthorized.</returns>
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDTO model)
         {
@@ -66,6 +76,10 @@ namespace JobAggregator.Api.Controllers
             return Unauthorized();
         }
 
+        /// <summary>
+        /// Retrieves profile of currently authenticated user.
+        /// </summary>
+        /// <returns>IActionResult containing user profile data if found; otherwise NotFound or Unauthorized.</returns>
         [Authorize]
         [HttpGet("profile")]
         public async Task<IActionResult> GetProfile()
@@ -94,6 +108,11 @@ namespace JobAggregator.Api.Controllers
             return Ok(profile);
         }
 
+        /// <summary>
+        /// Updates profile of the currently authenticated user with the provided profile data.
+        /// </summary>
+        /// <param name="model">new profile data (first name, last name, location, phone number).</param>
+        /// <returns>IActionResult indicating result of the update operation.</returns>
         [Authorize]
         [HttpPut("profile")]
         public async Task<IActionResult> UpdateProfile(UserProfileDTO model)
@@ -122,6 +141,11 @@ namespace JobAggregator.Api.Controllers
             return BadRequest(result.Errors);
         }
 
+        /// <summary>
+        /// Generates a JWT token for the specified user.
+        /// </summary>
+        /// <param name="user">ApplicationUser for whom to generate the token.</param>
+        /// <returns>JWT token as a string.</returns>
         private string GenerateJwtToken(ApplicationUser user)
         {
             var userClaims = new List<Claim>

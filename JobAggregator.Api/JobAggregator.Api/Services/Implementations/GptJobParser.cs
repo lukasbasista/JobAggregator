@@ -21,6 +21,14 @@ namespace JobAggregator.Api.Services.Implementations
             _logger = logger;
         }
 
+        /// <summary>
+        /// Parses job posting data from raw content by generating a prompt, calling the GPT API and deserializing response into a JobPostingData.
+        /// </summary>
+        /// <param name="content">raw job posting content.</param>
+        /// <param name="jobUrl">URL of the job posting.</param>
+        /// <param name="portalName">name of the portal.</param>
+        /// <param name="portalUrl">URL of the portal.</param>
+        /// <returns>JobPostingData object if successful; otherwise, null.</returns>
         public async Task<JobPostingData?> ParseJobAsync(string content, string jobUrl, string portalName, string portalUrl)
         {
             var prompt = GenerateGeneralPrompt(content, portalName, portalUrl);
@@ -110,6 +118,11 @@ namespace JobAggregator.Api.Services.Implementations
             ";
         }
 
+        /// <summary>
+        /// Calls GPT API with specified prompt and returns trimmed response content.
+        /// </summary>
+        /// <param name="prompt">prompt to send to the GPT API.</param>
+        /// <returns>trimmed GPT API response content or null.</returns>
         private async Task<string?> CallGptApiAsync(string prompt)
         {
             var requestBody = new
@@ -158,6 +171,11 @@ namespace JobAggregator.Api.Services.Implementations
             }
         }
 
+        /// <summary>
+        /// Cleans and deserialize GPT API response into a JobPostingData object.
+        /// </summary>
+        /// <param name="gptResponse">raw GPT API response</param>
+        /// <returns>A JobPostingData object or null.</returns>
         private JobPostingData? DeserializeGptResponse(string gptResponse)
         {
             try
@@ -217,6 +235,11 @@ namespace JobAggregator.Api.Services.Implementations
             return string.IsNullOrEmpty(cleaned) ? "none" : cleaned;
         }
 
+        /// <summary>
+        /// Parses company data from a GPT response by generating a company-specific prompt and deserializing the response into a CompanyData object.
+        /// </summary>
+        /// <param name="companyName">name of the company.</param>
+        /// <returns>A CompanyData object if successful; otherwise null.</returns>
         public async Task<CompanyData?> ParseCompanyAsync(string companyName)
         {
             var prompt = GenerateCompanyPrompt(companyName);
@@ -237,6 +260,11 @@ namespace JobAggregator.Api.Services.Implementations
             return companyData;
         }
 
+        /// <summary>
+        /// Generates a company specific prompt for GPT API based on the provided company name.
+        /// </summary>
+        /// <param name="companyName">name of the company.</param>
+        /// <returns>String representing generated prompt.</returns>
         private static string GenerateCompanyPrompt(string companyName)
         {
             return $@"
@@ -247,7 +275,6 @@ namespace JobAggregator.Api.Services.Implementations
         4. Website MUST be official domain
         5. Headquarters format: 'Město, Kraj, Czech Republic' - use 'NULL' only if there is no data for headquarters, not for partial data
         6. Use czech language for description and industry. English otherwise
-        7. Description should be at least 3 sentences if there are known informations about company, NULL otherwise
 
         Critical requirements:
             1. STRICT JSON SYNTAX:
@@ -273,7 +300,7 @@ namespace JobAggregator.Api.Services.Implementations
         REQUIRED OUTPUT:
         {{
             ""CompanyName"": ""{companyName}"",
-            ""Description"": ""MAX 20 words. KNOWN specialization only"",
+            ""Description"": ""3-5 sentences. KNOWN specialization only"",
             ""WebsiteUrl"": ""Full URL or null"",
             ""FoundedYear"": ""YYYY or null"",
             ""Headquarters"": ""Official HQ location or null"",
@@ -283,6 +310,11 @@ namespace JobAggregator.Api.Services.Implementations
     ";
         }
 
+        /// <summary>
+        /// Deserializes GPT API response into a CompanyData object.
+        /// </summary>
+        /// <param name="gptResponse">raw GPT API response.</param>
+        /// <returns>CompanyData object if deserialization is successful; otherwise null.</returns>
         private CompanyData? DeserializeCompanyResponse(string gptResponse)
         {
             try
