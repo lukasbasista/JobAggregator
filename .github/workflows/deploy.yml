@@ -32,7 +32,7 @@ jobs:
           source ~/.profile
           export ASPNETCORE_ENVIRONMENT=Production
           cd /var/www/JobAggregator/JobAggregator.Api/JobAggregator.Api &&
-          rm -rf bin/ obj/ &&
+          rm -rf obj/ bin/Release/net8.0/{*.dll,*.pdb,*.json,*.exe,*.xml} &&
           dotnet build --configuration Release &&
           dotnet tool restore &&
           dotnet ef database update --configuration Release &&
