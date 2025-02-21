@@ -39,7 +39,7 @@ namespace JobAggregator.Api.Services.Implementations
 
             var jobPostings = new ConcurrentBag<JobPosting>();
             var processedCompanies = new ConcurrentDictionary<string, Lazy<Task<Company>>>();
-            int pageNumber = 5;
+            int pageNumber = 1;
 
             while (pageNumber <= MaxPages)
             {
@@ -77,7 +77,7 @@ namespace JobAggregator.Api.Services.Implementations
         /// <summary>
         /// Maximum number of pages to process – can be overridden in derived classes.
         /// </summary>
-        protected virtual int MaxPages => 2;
+        protected virtual int MaxPages => 5;
 
         /// <summary>
         /// Maximum number of parallel threads for processing job postings.

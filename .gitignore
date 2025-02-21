@@ -3,3 +3,4 @@
 /JobAggregator.Api/JobAggregator.Api/.vs/
 .vs/
 /JobAggregator.Api/JobAggregator.Api/Logs
+/JobAggregator.Api/JobAggregator.Api/appsettings.Development.json
