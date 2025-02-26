@@ -4,6 +4,7 @@ using JobAggregator.Api.Helpers;
 using JobAggregator.Api.Models;
 using JobAggregator.Api.Services.Interfaces;
 using System.Collections.Concurrent;
+using System.Threading.Tasks.Dataflow;
 
 namespace JobAggregator.Api.Services.Implementations
 {
@@ -15,6 +16,8 @@ namespace JobAggregator.Api.Services.Implementations
         protected readonly ILogger _logger;
         protected readonly IGptJobParser _gptJobParser;
         protected readonly IServiceProvider _serviceProvider;
+
+        private static readonly ConcurrentDictionary<string, SemaphoreSlim> _jobPostingLocks = new ConcurrentDictionary<string, SemaphoreSlim>();
 
         protected BaseScraper(IServiceProvider serviceProvider, ILogger logger, IGptJobParser gptJobParser)
         {
@@ -127,35 +130,44 @@ namespace JobAggregator.Api.Services.Implementations
             }
 
             var externalId = GenerateExternalId(jobUrl);
-            if (await JobExistsByExternalIdAsync(externalId))
+            var jobLock = _jobPostingLocks.GetOrAdd(externalId, _ => new SemaphoreSlim(1, 1));
+            await jobLock.WaitAsync();
+            try
             {
-                _logger.LogInformation("Job posting with ExternalID {ExternalID} already exists.", externalId);
-                return;
+                if (await JobExistsByExternalIdAsync(externalId))
+                {
+                    _logger.LogInformation("Job posting with ExternalID {ExternalID} already exists.", externalId);
+                    return;
+                }
+
+                var jobContent = await GetJobContentAsync(jobUrl);
+                if (string.IsNullOrEmpty(jobContent))
+                {
+                    _logger.LogWarning("Job content from URL {JobUrl} is empty.", jobUrl);
+                    return;
+                }
+
+                var jobData = await _gptJobParser.ParseJobAsync(jobContent, jobUrl, PortalInfo.PortalName, PortalInfo.BaseUrl);
+                if (jobData == null)
+                {
+                    _logger.LogWarning("Failed to parse job posting from URL {JobUrl}.", jobUrl);
+                    return;
+                }
+
+                var company = await processedCompanies.GetOrAdd(
+                    jobData.CompanyName,
+                    key => new Lazy<Task<Company>>(() => GetOrCreateCompanyAsync(key))
+                ).Value;
+
+                var jobPosting = await MapJobDataToJobPostingAsync(jobData, company);
+                if (await AddJobPostingIfNotExistsAsync(jobPosting))
+                {
+                    jobPostings.Add(jobPosting);
+                }
             }
-
-            var jobContent = await GetJobContentAsync(jobUrl);
-            if (string.IsNullOrEmpty(jobContent))
+            finally
             {
-                _logger.LogWarning("Job content from URL {JobUrl} is empty.", jobUrl);
-                return;
-            }
-
-            var jobData = await _gptJobParser.ParseJobAsync(jobContent, jobUrl, PortalInfo.PortalName, PortalInfo.BaseUrl);
-            if (jobData == null)
-            {
-                _logger.LogWarning("Failed to parse job posting from URL {JobUrl}.", jobUrl);
-                return;
-            }
-
-            var company = await processedCompanies.GetOrAdd(
-                jobData.CompanyName,
-                key => new Lazy<Task<Company>>(() => GetOrCreateCompanyAsync(key))
-            ).Value;
-
-            var jobPosting = await MapJobDataToJobPostingAsync(jobData, company);
-            if (await AddJobPostingIfNotExistsAsync(jobPosting))
-            {
-                jobPostings.Add(jobPosting);
+                jobLock.Release();
             }
         }
 
