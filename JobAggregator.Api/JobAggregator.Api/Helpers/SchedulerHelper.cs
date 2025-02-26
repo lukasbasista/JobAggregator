@@ -21,27 +21,20 @@
                 var windowStart = now.Date.Add(window.Start);
                 var windowEnd = now.Date.Add(window.End);
 
-                if (now > windowEnd) continue;
-
-                DateTimeOffset scheduleTime;
-
-                if (now <= windowStart)
+                if (now < windowStart)
                 {
                     var randomMinutes = _random.Next(0, (int)(windowEnd - windowStart).TotalMinutes);
-                    scheduleTime = windowStart.AddMinutes(randomMinutes);
+                    return windowStart.AddMinutes(randomMinutes);
                 }
-                else
+                else if (now >= windowStart && now < windowEnd)
                 {
-                    var tomorrow = now.Date.AddDays(1);
-                    var firstWindow = TimeWindows.First();
-                    var tomorrowWindowStart = tomorrow.Add(firstWindow.Start);
-                    var tomorrowWindowEnd = tomorrow.Add(firstWindow.End);
-
-                    var randomMinutesTomorrow = _random.Next(0, (int)(tomorrowWindowEnd - tomorrowWindowStart).TotalMinutes);
-                    return tomorrowWindowStart.AddMinutes(randomMinutesTomorrow);
+                    var minutesLeft = (int)(windowEnd - now).TotalMinutes;
+                    if (minutesLeft > 0)
+                    {
+                        var randomMinutes = _random.Next(0, minutesLeft);
+                        return now.AddMinutes(randomMinutes);
+                    }
                 }
-
-                return scheduleTime;
             }
 
             var nextDay = now.Date.AddDays(1);
